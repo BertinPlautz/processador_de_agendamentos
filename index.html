@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Processador de Agendamentos — PRRS</title>
+<style>
+  :root {
+    --azul: #1a3a5c; --azul-m: #2c5282; --azul-cl: #ebf4ff;
+    --verde: #276749; --verde-cl: #f0fff4;
+    --verm: #9b2335; --verm-cl: #fff5f5;
+    --amar: #b7791f; --amar-cl: #fffbeb;
+    --borda: #d2dae6; --bg: #f5f7fa; --txt: #1a202c; --txt2: #4a5568; --br: #ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+  header{background:var(--azul);color:var(--br);padding:16px 28px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .logo{width:42px;height:42px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .lt span{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.7;font-weight:500;display:block}
+  .lt strong{font-size:16px;font-weight:700}
+  main{max-width:1020px;margin:0 auto;padding:28px 18px 60px}
+
+  /* STEPS */
+  .steps{display:flex;align-items:center;margin-bottom:28px}
+  .step{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--txt2);padding:5px 13px;border-radius:20px;transition:all .2s}
+  .step.active{background:var(--azul);color:var(--br)}
+  .step.done{background:var(--verde);color:var(--br)}
+  .snum{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+  .sdiv{flex:1;height:2px;background:var(--borda);min-width:16px}
+
+  /* CARD */
+  .card{background:var(--br);border-radius:12px;border:1px solid var(--borda);padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .ctitle{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .ctitle::after{content:'';flex:1;height:1px;background:var(--borda)}
+
+  /* TABS TIPO */
+  .tipo-tabs{display:flex;gap:10px;margin-bottom:20px}
+  .tipo-tab{flex:1;padding:14px;border:2px solid var(--borda);border-radius:10px;cursor:pointer;text-align:center;transition:all .2s;background:var(--bg)}
+  .tipo-tab:hover{border-color:var(--azul-m);background:var(--azul-cl)}
+  .tipo-tab.sel{border-color:var(--azul);background:var(--azul-cl)}
+  .tipo-tab .ti{font-size:24px;margin-bottom:6px}
+  .tipo-tab .tn{font-size:14px;font-weight:700;color:var(--azul)}
+  .tipo-tab .ts{font-size:11px;color:var(--txt2);margin-top:2px}
+
+  /* DROP */
+  .drop{border:2px dashed var(--borda);border-radius:10px;padding:42px 28px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);position:relative}
+  .drop:hover,.drop.over{border-color:var(--azul-m);background:var(--azul-cl)}
+  .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .drop .di{font-size:36px;margin-bottom:10px;display:block}
+  .drop .dt{font-size:15px;font-weight:600;color:var(--azul);margin-bottom:4px}
+  .drop .ds{font-size:12px;color:var(--txt2)}
+
+  /* CONTROLES */
+  .ctrl{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}
+  .fi{display:flex;flex-direction:column;gap:4px;flex:1;min-width:150px}
+  .fi label{font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px}
+  .fi input,.fi select{border:1px solid var(--borda);border-radius:7px;padding:8px 11px;font-size:13px;color:var(--txt);background:var(--br);outline:none;transition:border .2s}
+  .fi input:focus,.fi select:focus{border-color:var(--azul-m)}
+
+  /* BOTÕES */
+  .btn{padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .bp{background:var(--azul);color:var(--br)}.bp:hover{background:var(--azul-m)}.bp:disabled{opacity:.4;cursor:not-allowed}
+  .bs{background:var(--verde);color:var(--br)}.bs:hover{background:#1e5237}
+  .bo{background:transparent;color:var(--azul);border:1.5px solid var(--azul)}.bo:hover{background:var(--azul-cl)}
+  .bsm{padding:6px 13px;font-size:12px}
+  .bwarn{background:#7b341e;color:var(--br)}.bwarn:hover{background:#9c4221}
+
+  /* ALERTA */
+  .al{padding:11px 14px;border-radius:8px;font-size:13px;display:flex;gap:9px;align-items:flex-start;margin-top:12px}
+  .ali{background:var(--azul-cl);border-left:3px solid var(--azul-m);color:var(--azul)}
+  .alo{background:var(--verde-cl);border-left:3px solid var(--verde);color:var(--verde)}
+  .ale{background:var(--verm-cl);border-left:3px solid var(--verm);color:var(--verm)}
+  .alw{background:var(--amar-cl);border-left:3px solid var(--amar);color:var(--amar)}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:var(--bg);border-radius:10px;padding:12px 16px;border:1px solid var(--borda);text-align:center}
+  .sn{font-size:26px;font-weight:800;color:var(--azul);line-height:1;margin-bottom:3px}
+  .sl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);font-weight:600}
+  .sn.v{color:var(--verde)}.sn.r{color:var(--verm)}.sn.a{color:var(--amar)}
+
+  /* BARRA AÇÕES */
+  .bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .sw{position:relative;flex:1;min-width:180px}
+  .sw input{width:100%;padding:8px 11px 8px 33px;border:1px solid var(--borda);border-radius:7px;font-size:13px;outline:none;transition:border .2s}
+  .sw input:focus{border-color:var(--azul-m)}
+  .sic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:13px;pointer-events:none}
+
+  /* TABELAS */
+  .tw{overflow-x:auto;border-radius:8px;border:1px solid var(--borda)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead tr{background:var(--azul);color:var(--br)}
+  thead th{padding:9px 13px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--borda);transition:background .1s}
+  tbody tr:hover{background:var(--azul-cl)}
+  tbody tr.rlimite{background:var(--verm-cl);border-left:3px solid var(--verm)}
+  tbody tr.rlimite:hover{background:#ffe4e4}
+  tbody tr.rcancel{background:#fafafa;opacity:.6}
+  tbody td{padding:8px 13px;vertical-align:middle}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .bc{background:var(--azul-cl);color:var(--azul);border:1px solid #bee3f8}
+  .bl{background:var(--verm-cl);color:var(--verm);border:1px solid #feb2b2}
+  .bg{background:#e6fffa;color:#234e52;border:1px solid #81e6d9}
+  .ba{font-weight:700;color:var(--azul)}
+  .ba.lim{color:var(--verm)}
+  .cart{font-family:'Courier New',monospace;font-size:11px;color:var(--txt2);background:var(--bg);padding:1px 4px;border-radius:4px;border:1px solid var(--borda)}
+  .wa-link{font-size:11px;color:var(--verde);text-decoration:none;font-weight:600}
+  .wa-link:hover{text-decoration:underline}
+  .hora-badge{font-size:13px;font-weight:800;color:var(--azul);font-variant-numeric:tabular-nums}
+  .cancel-tag{font-size:10px;color:var(--verm);font-weight:600;display:block}
+  .vn{font-weight:500;display:block;line-height:1.3}
+  .vc{font-size:11px;color:var(--txt2);display:block}
+
+  /* PAINEL DE AVISOS */
+  .avisos{margin-bottom:16px}
+  .aviso-item{padding:8px 13px;border-radius:7px;font-size:12px;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start}
+  .av-dup{background:#fff3cd;border-left:3px solid #f6ad55;color:#744210}
+  .av-cart{background:var(--verm-cl);border-left:3px solid var(--verm);color:var(--verm)}
+  .av-campo{background:var(--azul-cl);border-left:3px solid var(--azul-m);color:var(--azul)}
+
+  /* SEPARADOR TIPO */
+  .tipo-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--txt2);padding:6px 13px;background:var(--bg);border-bottom:1px solid var(--borda)}
+
+  .hidden{display:none!important}
+  @media print{
+    header,.steps,.card:first-of-type,.bar,.sw,.rodinfo{display:none!important}
+    .card{border:none;box-shadow:none;padding:0}
+    body{background:#fff}
+    thead tr{background:#1a3a5c!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⚖️</div>
+  <div class="lt"><strong>Processador de Agendamentos de Visitas</strong></div>
+</header>
+<main>
+
+<!-- STEPS -->
+<div class="steps">
+  <div class="step active" id="s1"><div class="snum">1</div> Tipo e Arquivo</div>
+  <div class="sdiv"></div>
+  <div class="step" id="s2"><div class="snum">2</div> Revisar</div>
+  <div class="sdiv"></div>
+  <div class="step" id="s3"><div class="snum">3</div> Exportar</div>
+</div>
+
+<!-- UPLOAD -->
+<div id="sec-upload">
+  <div class="card">
+    <div class="ctitle">📋 Tipo de visita</div>
+    <div class="tipo-tabs">
+      <div class="tipo-tab sel" id="tab-pres" onclick="selTipo('presencial')">
+        <div class="ti">🏛️</div>
+        <div class="tn">Visita Presencial</div>
+        <div class="ts">Apenado + até 3 visitantes + Nº carteirinha</div>
+      </div>
+      <div class="tipo-tab" id="tab-int" onclick="selTipo('intima')">
+        <div class="ti">🔒</div>
+        <div class="tn">Visita Íntima</div>
+        <div class="ts">Apenado + visitante + horário — cancelados removidos</div>
+      </div>
+      <div class="tipo-tab" id="tab-vid" onclick="selTipo('video')">
+        <div class="ti">📹</div>
+        <div class="tn">Vídeo Chamada</div>
+        <div class="ts">Horário + visitante + WhatsApp — cancelados removidos</div>
+      </div>
+    </div>
+
+    <div class="ctitle">📂 Arquivo CSV do Wix</div>
+    <div class="drop" id="dz">
+      <input type="file" id="fi" accept=".csv">
+      <span class="di">📄</span>
+      <div class="dt">Arraste o CSV aqui ou clique para selecionar</div>
+      <div class="ds">Arquivo exportado da Lista de Agendamentos do Wix Bookings</div>
+    </div>
+    <div id="arq-info" class="hidden">
+      <div class="al alo" style="margin-top:12px">✅ <div><strong id="arq-nome"></strong> — <span id="arq-tot"></span> registros encontrados.</div></div>
+    </div>
+
+    <div class="ctrl">
+      <div class="fi"><label>Data da visita</label><input type="date" id="data-v"></div>
+      <div class="fi"><label>Galeria / Serviço</label><input type="text" id="gal-v" placeholder="Ex: R e T, Galeria D..."></div>
+      <div style="align-self:flex-end"><button class="btn bp" id="btn-proc" onclick="processar()" disabled>⚙️ Processar</button></div>
+    </div>
+    <div class="al ali" style="margin-top:14px">ℹ️ <span>Para <strong>Presencial/Íntima</strong>: marque ⚑ nos apenados com limite mensal. Para <strong>Vídeo Chamada</strong>: cancelados são removidos automaticamente e duplicatas são resolvidas.</span></div>
+  </div>
+</div>
+
+<!-- RESULTADO -->
+<div id="sec-res" class="hidden">
+  <div class="card">
+    <div class="ctitle" id="res-titulo">📋 Lista processada</div>
+    <div class="stats" id="stats-box"></div>
+    <div class="avisos" id="avisos-box"></div>
+    <div class="bar">
+      <div class="sw"><span class="sic">🔍</span><input type="text" id="busca" placeholder="Buscar nome, carteirinha, galeria..." oninput="filtrar()"></div>
+      <button class="btn bo bsm" onclick="voltarUpload()">← Novo arquivo</button>
+      <button class="btn bs" onclick="exportar()">⬇️ Exportar CSV</button>
+      <button class="btn bo bsm" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="tw"><table id="tab-res"><thead id="thead-res"></thead><tbody id="tbody-res"></tbody></table></div>
+    <div class="rodinfo" id="rod-info" style="font-size:11px;color:var(--txt2);text-align:center;margin-top:12px"></div>
+  </div>
+</div>
+
+</main>
+<script>
+// ====== ESTADO ======
+let TIPO = 'presencial';
+let DADOS = [];
+let csvLinhas = null;
+
+// ====== TIPO TABS ======
+function selTipo(t) {
+  TIPO = t;
+  document.getElementById('tab-pres').classList.toggle('sel', t==='presencial');
+  document.getElementById('tab-int').classList.toggle('sel', t==='intima');
+  document.getElementById('tab-vid').classList.toggle('sel', t==='video');
+}
+
+// ====== DROP ======
+const dz = document.getElementById('dz');
+const fi = document.getElementById('fi');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])carregarArq(e.dataTransfer.files[0])});
+fi.addEventListener('change', ()=>{if(fi.files[0])carregarArq(fi.files[0])});
+
+function carregarArq(f) {
+  const rd = new FileReader();
+  rd.onload = e => {
+    let txt = e.target.result;
+    if(txt.charCodeAt(0)===0xFEFF) txt=txt.slice(1);
+    const ls = parseCSV(txt);
+    if(ls.length<2){alert('CSV vazio ou não reconhecido.');return}
+    csvLinhas = ls;
+    const tot = ls.length-1;
+    document.getElementById('arq-nome').textContent = f.name;
+    document.getElementById('arq-tot').textContent = tot;
+    document.getElementById('arq-info').classList.remove('hidden');
+    document.getElementById('btn-proc').disabled = false;
+    // auto-detectar data
+    const hs = ls[0], r1 = ls[1];
+    const idxI = hs.indexOf('Horário de início do agendamento');
+    if(idxI>=0 && r1[idxI]) {
+      const m = r1[idxI].match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if(m) document.getElementById('data-v').value=`${m[3]}-${m[2]}-${m[1]}`;
+    }
+    // auto-detectar tipo pelo nome do serviço
+    const idxS = hs.indexOf('Nome do serviço');
+    if(idxS>=0 && r1[idxS]) {
+      const s = r1[idxS].toLowerCase();
+      if(s.includes('video') || s.includes('vídeo') || s.includes('chamada')) {
+        selTipo('video');
+      } else if(s.includes('intima') || s.includes('íntima')) {
+        selTipo('intima');
+      } else {
+        selTipo('presencial');
+      }
+    }
+  };
+  rd.readAsText(f,'UTF-8');
+}
+
+// ====== CSV PARSER ======
+function parseCSV(txt) {
+  const rows=[]; let i=0, n=txt.length;
+  while(i<n){
+    const row=[]; 
+    while(i<n && txt[i]!=='\n'){
+      if(txt[i]==='"'){
+        i++; let c='';
+        while(i<n){
+          if(txt[i]==='"'){if(i+1<n&&txt[i+1]==='"'){c+='"';i+=2}else{i++;break}}
+          else c+=txt[i++];
+        }
+        row.push(c.trim());
+        if(i<n&&txt[i]===',')i++;
+      } else {
+        let c='';
+        while(i<n&&txt[i]!==','&&txt[i]!=='\n')c+=txt[i++];
+        row.push(c.trim());
+        if(i<n&&txt[i]===',')i++;
+      }
+    }
+    if(i<n&&txt[i]==='\n')i++;
+    if(row.length>1||(row.length===1&&row[0]))rows.push(row);
+  }
+  return rows;
+}
+
+// ====== CAPITALIZAR ======
+function cap(s) {
+  if(!s) return '';
+
+  // Partículas que nunca iniciam palavra (exceto posição 0)
+  const MIN = new Set([
+    'de','da','do','das','dos','di',
+    'e','a','o','as','os',
+    'em','no','na','nos','nas',
+    'ao','aos','à','às',
+    'pelo','pela','pelos','pelas',
+    'por','para','com','sem','sob','sobre',
+    'um','uma','uns','umas',
+    'von','van','del','bin','bint',
+  ]);
+
+  // Siglas que ficam em maiúsculo total
+  const SIGLAS = new Set(['cpf','rg','cnh','inss','clt','ltda','me','epp','sa','ss']);
+
+  const palavras = s.trim().split(/\s+/);
+
+  return palavras.map((p, i) => {
+    if(!p) return '';
+    const pl = p.toLowerCase();
+    const pClean = pl.replace(/[^a-záàãâéêíóõôúüçñ]/g, '');
+
+    // Sigla conhecida → tudo maiúsculo
+    if(SIGLAS.has(pClean)) return p.toUpperCase();
+
+    // Partícula minúscula (exceto primeira palavra)
+    if(i > 0 && MIN.has(pl)) return pl;
+
+    // Palavra com hífen → capitalizar cada parte individualmente
+    if(p.includes('-')) {
+      return p.split('-').map((parte, j) => {
+        if(!parte) return '';
+        const ptl = parte.toLowerCase();
+        if(j > 0 && MIN.has(ptl)) return ptl;
+        return ptl[0].toUpperCase() + ptl.slice(1);
+      }).join('-');
+    }
+
+    // Caso geral: primeira letra maiúscula, resto minúsculo
+    return pl[0].toUpperCase() + pl.slice(1);
+  }).join(' ');
+}
+
+// ====== NORMALIZAR GALERIA ======
+function normGal(raw) {
+  if(!raw)return'';
+  let c = raw.trim().toUpperCase().replace(/\s+/g,'').replace(/[-–]/g,'');
+  // Vídeo: Galeria "R" sozinha = Regalia
+  return c;
+}
+function exibeGal(c) {
+  // Para exibição na tabela de vídeo: R sozinho = Regalia
+  if(c==='R')return'Regalia';
+  return c;
+}
+
+// ====== EXTRAIR FORM DATA ======
+function getFormData(row, headers) {
+  const fd = {};
+  const pares = [];
+  for(let i=0;i<headers.length;i++){
+    const h = headers[i];
+    if(h.startsWith('Campo do formulário')||h.startsWith('Form Field')){
+      const k = (row[i]||'').trim().toLowerCase();
+      const v = (row[i+1]||'').trim();
+      if(k) pares.push({k,v,idx:i});
+    }
+  }
+  // guardar lista ordenada também
+  fd._pares = pares;
+  for(const p of pares) fd[p.k] = p.v;
+  return fd;
+}
+
+// ====== PROCESSAR ======
+function processar() {
+  if(!csvLinhas)return;
+  if(TIPO==='presencial') processarPresencial();
+  else if(TIPO==='intima') processarIntima();
+  else processarVideo();
+}
+
+// ====== PROCESSAR PRESENCIAL ======
+function processarPresencial() {
+  const ls = csvLinhas, hs = ls[0];
+  const idxStatus = hs.indexOf('Status do agendamento');
+  DADOS = [];
+
+  for(let r=1;r<ls.length;r++){
+    const row = ls[r];
+    if(!row||row.length<5)continue;
+    const fd = getFormData(row,hs);
+    const nomeAp = fd['nome do apenado']||'';
+    const galeria = fd['galeria']||fd['cela']||'';
+    if(!nomeAp)continue;
+
+    // visitantes em ordem
+    const visitantes=[];
+    let cont=0;
+    for(const p of fd._pares){
+      if(p.k.includes('visitante')&&(p.k.includes('nome')||/^\d[ºo°]/.test(p.k))){
+        cont++;
+        const cart = fd._pares.find((q,qi)=> qi > fd._pares.indexOf(p) && (q.k.includes('carteirinha')||q.k.includes('cart')));
+        if(cont<=3) visitantes.push({nome:p.v, cart: cart?cart.v:''});
+      }
+    }
+
+    DADOS.push({
+      id:r, tipo:'presencial',
+      nomeApenado:cap(nomeAp),
+      cela:normGal(galeria),
+      visitantes,
+      limite:false
+    });
+  }
+  DADOS.sort((a,b)=>{
+    const cc=a.cela.localeCompare(b.cela,'pt-BR',{numeric:true});
+    if(cc!==0)return cc;
+    return a.nomeApenado.localeCompare(b.nomeApenado,'pt-BR');
+  });
+  renderPresencial();
+  mostrarRes();
+}
+
+// ====== PROCESSAR ÍNTIMA ======
+function processarIntima() {
+  const ls = csvLinhas, hs = ls[0];
+  const idxStatus = hs.indexOf('Status do agendamento');
+  const idxInicio = hs.indexOf('Horário de início do agendamento');
+  DADOS = [];
+
+  for(let r=1;r<ls.length;r++){
+    const row=ls[r];
+    if(!row||row.length<5)continue;
+    const status=(idxStatus>=0?row[idxStatus]:'').toLowerCase();
+    if(status==='cancelado')continue; // descartar cancelados
+
+    const fd=getFormData(row,hs);
+    const nomeAp  = fd['nome do apenado']||'';
+    const galeria = fd['galeria']||fd['cela']||'';
+    const nomeVis = fd['nome']||'';
+    const cart    = fd['nº da carteirinha']||fd['nº carteirinha']||fd['carteirinha']||'';
+
+    let hora='';
+    if(idxInicio>=0&&row[idxInicio]){
+      const m=row[idxInicio].match(/(\d{2}:\d{2})/);
+      if(m)hora=m[1];
+    }
+    if(!nomeAp)continue;
+
+    DADOS.push({
+      id:r, tipo:'intima',
+      nomeApenado:cap(nomeAp.trim()),
+      galeria:normGal(galeria),
+      nomeVisitante:cap(nomeVis.trim()),
+      carteirinha:cart.trim(),
+      horaInicio:hora,
+      limite:false
+    });
+  }
+  // Ordenar por hora
+  DADOS.sort((a,b)=>a.horaInicio.localeCompare(b.horaInicio));
+  renderIntima();
+  mostrarRes();
+}
+
+// ====== RENDER ÍNTIMA ======
+function renderIntima() {
+  document.getElementById('res-titulo').textContent = '🔒 Lista — Visita Íntima';
+
+  document.getElementById('thead-res').innerHTML=`<tr>
+    <th style="width:28px">⚑</th><th>#</th>
+    <th>Nome do Apenado</th><th>Galeria</th>
+    <th>Visitante</th><th>Nº Cart.</th><th>Horário</th>
+  </tr>`;
+
+  const busca=(document.getElementById('busca').value||'').toLowerCase();
+  const filt=DADOS.filter(d=>{
+    if(!busca)return true;
+    return [d.nomeApenado,d.galeria,d.nomeVisitante,d.carteirinha,d.horaInicio].join(' ').toLowerCase().includes(busca);
+  });
+
+  const tbody=document.getElementById('tbody-res');
+  tbody.innerHTML='';
+  filt.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    if(d.limite)tr.classList.add('rlimite');
+    tr.innerHTML=`
+      <td style="text-align:center"><input type="checkbox" ${d.limite?'checked':''} onchange="toggleLimInt(${d.id},this.checked)" style="cursor:pointer;width:14px;height:14px"></td>
+      <td style="color:var(--txt2);font-size:12px">${i+1}</td>
+      <td><span class="ba ${d.limite?'lim':''}">${d.nomeApenado}</span>${d.limite?'<span class="badge bl" style="margin-left:6px">Limite</span>':''}</td>
+      <td><span class="badge bc">${d.galeria}</span></td>
+      <td><span class="vn">${d.nomeVisitante}</span></td>
+      <td><span class="cart">${d.carteirinha}</span></td>
+      <td><span class="hora-badge">${d.horaInicio}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const tot=DADOS.length, lim=DADOS.filter(d=>d.limite).length;
+  document.getElementById('stats-box').innerHTML=`
+    <div class="stat"><div class="sn">${tot}</div><div class="sl">Íntimas</div></div>
+    <div class="stat"><div class="sn v">${tot-lim}</div><div class="sl">Confirmadas</div></div>
+    <div class="stat"><div class="sn r">${lim}</div><div class="sl">Limite do mês</div></div>
+  `;
+  document.getElementById('avisos-box').innerHTML='';
+  rodape();
+}
+
+function toggleLimInt(id,val){
+  const d=DADOS.find(x=>x.id===id);
+  if(d){d.limite=val;renderIntima();}
+}
+
+// ====== EXPORTAR ÍNTIMA ======
+function exportarIntima(){
+  // Formato: Apenado,Galeria,Visitante,Carteirinha,Horário
+  // Sem cabeçalho — ao usar "Dividir texto em colunas" no Sheets fica no layout final
+  const dv=document.getElementById('data-v').value||'data';
+  const normais=DADOS.filter(d=>!d.limite);
+  const lim=DADOS.filter(d=>d.limite);
+  const linhas=normais.map(d=>{
+    const campos=[d.nomeApenado,d.galeria,d.nomeVisitante,d.carteirinha,d.horaInicio];
+    return campos.map(c=>{const s=String(c||'');return s.includes(',')?`"${s}"`:s}).join(',');
+  });
+  // Linha em branco + apenados com limite
+  if(lim.length){
+    linhas.push('');
+    for(const d of lim) linhas.push(`${d.nomeApenado} (Limite de Visitas do Mês),${d.galeria},${d.nomeVisitante},${d.carteirinha},${d.horaInicio}`);
+  }
+  const blob=new Blob(['\uFEFF'+linhas.join('\r\n')],{type:'text/plain;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`PRRS_Intima_${dv}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+// ====== PROCESSAR VÍDEO ======
+function processarVideo() {
+  const ls = csvLinhas, hs = ls[0];
+  const idxStatus = hs.indexOf('Status do agendamento');
+  const idxInicio = hs.indexOf('Horário de início do agendamento');
+  const idxTel = hs.indexOf('Tel.');
+
+  // Extrair tudo
+  let todos = [];
+  for(let r=1;r<ls.length;r++){
+    const row=ls[r];
+    if(!row||row.length<5)continue;
+    const status = (idxStatus>=0?row[idxStatus]:'').toLowerCase();
+    const fd = getFormData(row,hs);
+
+    // Nome apenado: campo "nome " (com espaço) ou "nome do apenado"
+    const nomeAp = fd['nome ']||fd['nome do apenado']||fd['nome']||'';
+    const galeria = fd['galeria']||'';
+    // Nome visitante: segundo campo "nome"
+    let nomeVis='', cartVis='', tel='', email='';
+    let nomeCount=0;
+    for(const p of fd._pares){
+      if(p.k==='nome '||p.k==='nome do apenado'){continue} // skip apenado
+      if(p.k==='nome'){nomeCount++;if(nomeCount===1)nomeVis=p.v}
+      if(p.k==='nº carteirinha'||p.k==='nº carteirinha ')cartVis=p.v;
+      if(p.k==='telefone'||p.k==='tel.')tel=p.v;
+      if(p.k==='email')email=p.v;
+    }
+    // Fallback: carteirinha no campo "Nome" da linha (coluna B do Wix = carteirinha)
+    if(!cartVis && ls[r][1] && /^\d+$/.test(ls[r][1].trim())) cartVis = ls[r][1].trim();
+    // tel do CSV diretamente
+    if(!tel && idxTel>=0) tel=(row[idxTel]||'').trim();
+
+    let horaInicio='';
+    if(idxInicio>=0 && row[idxInicio]){
+      const m=row[idxInicio].match(/(\d{2}:\d{2})/);
+      if(m) horaInicio=m[1];
+    }
+
+    // Detectar erros de preenchimento
+    const avisos=[];
+    // Carteirinha preenchida com nome?
+    if(cartVis && /[a-zA-ZÀ-ú]{3,}/.test(cartVis)) avisos.push({tipo:'cart',msg:`Nº carteirinha parece ser um nome: "${cartVis}"`});
+
+    todos.push({
+      id:r, tipo:'video',
+      nomeApenado:cap(nomeAp.trim()),
+      galeria:normGal(galeria),
+      nomeVisitante:cap(nomeVis.trim()),
+      carteirinha:cartVis.trim(),
+      tel:tel.trim(),
+      email:email.trim(),
+      horaInicio,
+      status,
+      cancelado: status==='cancelado',
+      avisos,
+      limite:false,
+      duplicata:false
+    });
+  }
+
+  // Resolver duplicatas: mesma carteirinha → manter confirmado, descartar cancelado
+  const porCart = {};
+  for(const d of todos){
+    const k = d.carteirinha||d.nomeVisitante;
+    if(!porCart[k]) porCart[k]=[];
+    porCart[k].push(d);
+  }
+  const avisosDup = [];
+  for(const [k,arr] of Object.entries(porCart)){
+    if(arr.length>1){
+      const confirmados = arr.filter(x=>!x.cancelado);
+      const cancelados = arr.filter(x=>x.cancelado);
+      // marcar cancelados como duplicata a remover
+      for(const c of cancelados) c.duplicata=true;
+      // se mais de 1 confirmado, é duplicata real
+      if(confirmados.length>1){
+        for(const c of confirmados.slice(1)) c.duplicata=true;
+        avisosDup.push({tipo:'dup',msg:`Duplicata confirmada: ${confirmados[0].nomeVisitante} (Cart. ${k}) — mantido horário ${confirmados[0].horaInicio}`});
+      }
+    }
+  }
+
+  // Filtrar: apenas confirmados não-duplicata
+  DADOS = todos.filter(d=>!d.cancelado && !d.duplicata);
+
+  // Coletar descartados para aviso
+  const descartados = todos.filter(d=>d.cancelado||d.duplicata);
+
+  // Ordenar por hora
+  DADOS.sort((a,b)=>a.horaInicio.localeCompare(b.horaInicio));
+
+  // Coletar avisos de carteirinha errada
+  const avisosCart = DADOS.filter(d=>d.avisos.length>0).flatMap(d=>d.avisos);
+
+  // Juntar avisos
+  window._avisosDup = avisosDup;
+  window._avisosCart = avisosCart;
+  window._descartados = descartados;
+
+  renderVideo();
+  mostrarRes();
+}
+
+// ====== RENDER PRESENCIAL ======
+function renderPresencial() {
+  document.getElementById('res-titulo').textContent = '📋 Lista — Visita Presencial / Íntima';
+
+  // Cabeçalho
+  document.getElementById('thead-res').innerHTML=`<tr>
+    <th style="width:28px">⚑</th><th>#</th>
+    <th>Nome do Apenado</th><th>Cela</th>
+    <th>Visitante 1</th><th>Nº Cart.</th>
+    <th>Visitante 2</th><th>Nº Cart.</th>
+    <th>Visitante 3</th><th>Nº Cart.</th>
+  </tr>`;
+
+  const busca=(document.getElementById('busca').value||'').toLowerCase();
+  const filt=DADOS.filter(d=>{
+    if(!busca)return true;
+    return [d.nomeApenado,d.cela,...d.visitantes.map(v=>v.nome+' '+v.cart)].join(' ').toLowerCase().includes(busca);
+  });
+
+  const tbody=document.getElementById('tbody-res');
+  tbody.innerHTML='';
+  filt.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    if(d.limite) tr.classList.add('rlimite');
+    const vs=[0,1,2].map(j=>{
+      const v=d.visitantes[j];
+      if(!v)return'<td></td><td></td>';
+      return`<td><span class="vn">${cap(v.nome)}</span></td><td><span class="cart">${v.cart}</span></td>`;
+    });
+    tr.innerHTML=`
+      <td style="text-align:center"><input type="checkbox" ${d.limite?'checked':''} onchange="toggleLim(${d.id},this.checked)" style="cursor:pointer;width:14px;height:14px"></td>
+      <td style="color:var(--txt2);font-size:12px">${i+1}</td>
+      <td><span class="ba ${d.limite?'lim':''}">${d.nomeApenado}</span>${d.limite?'<span class="badge bl" style="margin-left:6px">Limite</span>':''}</td>
+      <td><span class="badge bc">${d.cela}</span></td>
+      ${vs.join('')}
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Stats
+  const tot=DADOS.length, lim=DADOS.filter(d=>d.limite).length;
+  const visTotal=DADOS.reduce((s,d)=>s+d.visitantes.length,0);
+  document.getElementById('stats-box').innerHTML=`
+    <div class="stat"><div class="sn">${tot}</div><div class="sl">Apenados</div></div>
+    <div class="stat"><div class="sn v">${tot-lim}</div><div class="sl">Com visita</div></div>
+    <div class="stat"><div class="sn r">${lim}</div><div class="sl">Limite do mês</div></div>
+    <div class="stat"><div class="sn">${visTotal}</div><div class="sl">Visitantes</div></div>
+  `;
+  document.getElementById('avisos-box').innerHTML='';
+  rodape();
+}
+
+// ====== RENDER VÍDEO ======
+function renderVideo() {
+  document.getElementById('res-titulo').textContent = '📹 Lista — Vídeo Chamada';
+
+  // Cabeçalho
+  document.getElementById('thead-res').innerHTML=`<tr>
+    <th>Horário</th>
+    <th>Carteirinha — Visitante</th>
+    <th>WhatsApp</th>
+    <th>Nome do Apenado</th>
+    <th>Galeria</th>
+  </tr>`;
+
+  const busca=(document.getElementById('busca').value||'').toLowerCase();
+  const filt=DADOS.filter(d=>{
+    if(!busca)return true;
+    return [d.nomeApenado,d.nomeVisitante,d.carteirinha,d.galeria,d.horaInicio].join(' ').toLowerCase().includes(busca);
+  });
+
+  const tbody=document.getElementById('tbody-res');
+  tbody.innerHTML='';
+  filt.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    // Número de tel limpo para WhatsApp
+    const telLimpo=d.tel.replace(/\D/g,'');
+    const waLink=telLimpo?`<a class="wa-link" href="https://wa.me/${telLimpo}" target="_blank">📱 ${d.tel}</a>`:'<span style="color:var(--txt2);font-size:11px">—</span>';
+    const cartErr=d.avisos.length>0?'<span style="color:var(--verm);font-size:10px;margin-left:4px">⚠️ carteirinha inválida</span>':'';
+    tr.innerHTML=`
+      <td><span class="hora-badge">${d.horaInicio}</span></td>
+      <td><span class="vn"><span class="cart">${d.carteirinha}</span>${cartErr} — ${cap(d.nomeVisitante)}</span></td>
+      <td>${waLink}</td>
+      <td><span class="ba">${d.nomeApenado}</span></td>
+      <td><span class="badge bc">${exibeGal(d.galeria)}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Stats
+  const tot=DADOS.length;
+  const desc=window._descartados||[];
+  const dups=desc.filter(d=>d.duplicata&&!d.cancelado).length;
+  const canc=desc.filter(d=>d.cancelado).length;
+  document.getElementById('stats-box').innerHTML=`
+    <div class="stat"><div class="sn v">${tot}</div><div class="sl">Confirmados</div></div>
+    <div class="stat"><div class="sn a">${canc}</div><div class="sl">Cancelados (removidos)</div></div>
+    <div class="stat"><div class="sn r">${dups}</div><div class="sl">Duplicatas (removidas)</div></div>
+  `;
+
+  // Avisos
+  const ab=document.getElementById('avisos-box');
+  ab.innerHTML='';
+  const adups=window._avisosDup||[];
+  const acart=window._avisosCart||[];
+  for(const a of adups){
+    const d=document.createElement('div');
+    d.className='aviso-item av-dup';
+    d.innerHTML=`⚠️ <span><strong>Duplicata resolvida:</strong> ${a.msg}</span>`;
+    ab.appendChild(d);
+  }
+  for(const a of acart){
+    const d=document.createElement('div');
+    d.className='aviso-item av-cart';
+    d.innerHTML=`🚨 <span><strong>Atenção:</strong> ${a.msg}</span>`;
+    ab.appendChild(d);
+  }
+  rodape();
+}
+
+function filtrar(){
+  if(TIPO==='presencial') renderPresencial();
+  else if(TIPO==='intima') renderIntima();
+  else renderVideo();
+}
+
+function toggleLim(id,val){
+  const d=DADOS.find(x=>x.id===id);
+  if(d){d.limite=val;renderPresencial();}
+}
+
+function mostrarRes(){
+  document.getElementById('sec-res').classList.remove('hidden');
+  document.getElementById('sec-res').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('s1').className='step done';
+  document.getElementById('s2').className='step active';
+}
+
+function voltarUpload(){
+  document.getElementById('sec-res').classList.add('hidden');
+  ['s1','s2','s3'].forEach((id,i)=>{document.getElementById(id).className='step'+(i===0?' active':'')});
+  document.getElementById('arq-info').classList.add('hidden');
+  document.getElementById('btn-proc').disabled=true;
+  fi.value='';csvLinhas=null;DADOS=[];
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function rodape(){
+  const dv=document.getElementById('data-v').value;
+  const df=dv?new Date(dv+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}):'';
+  const gal=document.getElementById('gal-v').value;
+  document.getElementById('rod-info').textContent=`${gal?gal+' — ':''}${df} • Processado em ${new Date().toLocaleString('pt-BR')}`;
+}
+
+// ====== EXPORTAR ======
+function exportar(){
+  if(TIPO==='presencial') exportarPresencial();
+  else if(TIPO==='intima') exportarIntima();
+  else exportarVideo();
+  document.getElementById('s2').className='step done';
+  document.getElementById('s3').className='step active';
+}
+
+function exportarPresencial(){
+  const normais=DADOS.filter(d=>!d.limite);
+  const lim=DADOS.filter(d=>d.limite);
+  let rows=[['Nome do Apenado','Cela','Visitante 1','Nº Cart.','Visitante 2','Nº Cart.','Visitante 3','Nº Cart.']];
+  for(const d of normais){
+    rows.push([d.nomeApenado,d.cela,
+      d.visitantes[0]?cap(d.visitantes[0].nome):'', d.visitantes[0]?d.visitantes[0].cart:'',
+      d.visitantes[1]?cap(d.visitantes[1].nome):'', d.visitantes[1]?d.visitantes[1].cart:'',
+      d.visitantes[2]?cap(d.visitantes[2].nome):'', d.visitantes[2]?d.visitantes[2].cart:''
+    ]);
+  }
+  if(lim.length){
+    rows.push([]);
+    for(const d of lim) rows.push([`${d.nomeApenado} (Limite de Visitas do Mês)`,'','','','','','','']);
+  }
+  baixarCSV(rows,'PRRS_Presencial');
+}
+
+function exportarVideo(){
+  // Formato: uma linha por registro na coluna A, separado por vírgulas
+  // Apenado,Galeria,Visitante,Carteirinha,Telefone,Horário
+  // Sem cabeçalho — ao usar "Dividir texto em colunas" no Sheets fica no layout final
+  const dv = document.getElementById('data-v').value || 'data';
+  const linhas = DADOS.map(d => {
+    const tel = d.tel.replace(/[\s\-]/g, ''); // limpar espaços e hífens do tel
+    const campos = [
+      d.nomeApenado,
+      d.galeria,
+      cap(d.nomeVisitante),
+      d.carteirinha,
+      tel,
+      d.horaInicio
+    ];
+    // Cada campo: se contiver vírgula, envolver em aspas
+    return campos.map(c => {
+      const s = String(c || '');
+      return s.includes(',') ? `"${s}"` : s;
+    }).join(',');
+  });
+  const conteudo = linhas.join('\r\n');
+  const blob = new Blob(['\uFEFF' + conteudo], {type: 'text/plain;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `PRRS_Video_${dv}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function baixarCSV(rows, prefixo){
+  const dv=document.getElementById('data-v').value||'data';
+  const csv=rows.map(r=>r.map(c=>{
+    const s=String(c||'');
+    if(s.includes(',')|| s.includes('"')||s.includes('\n'))return`"${s.replace(/"/g,'""')}"`;
+    return s;
+  }).join(',')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${prefixo}_${dv}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
